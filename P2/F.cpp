@@ -1,637 +1,547 @@
-//Igor Lonak
-
+//Igor Łonak
 
 #include <iostream>
+#include <string>
 
 using namespace std;
 
-class SQUAD_CLASS;
-
-class BERSERKER_CLASS;
-
-class BEAST_CLASS;
-
-class HUMAN_CLASS;
-
-class ARENA_CLASS;
-
 class CAESAR_CLASS;
 
-class PLAYER_CLASS;
-
-int ATTACKS = 0;
-
-
-
-class PLAYER_CLASS {
+class PLAYER_CLASS{
 public:
-
-    unsigned int maxHP;
-    unsigned int currentHP;
-    unsigned int dmg;
-    unsigned int agility;
+    unsigned int maxhp;
+    unsigned int hp;
+    unsigned int ad;
+    unsigned int agi;
+    PLAYER_CLASS* next;
     friend class CAESAR_CLASS;
-    friend class ARENA_CLASS;
-
-
+    friend class SQUAD_CLASS;
 public:
-
-
-    PLAYER_CLASS(unsigned int max = 1, unsigned int dmg = 0, unsigned int agility = 0){
-        this->maxHP = max;
-        this->currentHP = max;
-        this->dmg = dmg;
-        this->agility = agility;
-    };
-
-
-    virtual unsigned int getRemainingHealth() {
-
-        return (currentHP * 100 / maxHP);
-    }
-
-    virtual unsigned int getDamage() = 0;
-
-    virtual unsigned int getAgility() = 0;
-
-    virtual void takeDamage(unsigned int dmg) = 0;
-
-    virtual void applyWinnerReward() = 0;
-
-    virtual void cure() = 0;
-
-    virtual void printParams() = 0;
-
+    virtual unsigned int getRemainingHealth()=0;
+    virtual unsigned int getDamage()=0;
+    virtual unsigned int getAgility()=0;
+    virtual string getId()=0;
+    virtual unsigned int getDef(){return 0;};
+    virtual void takeDamage(unsigned int dmg)=0;
+    virtual void applyWinnerReward()=0;
+    virtual void cure()=0;
+    virtual void printParams()=0;
 protected:
+    virtual void die()=0;
 
-    void die() {
-        currentHP = 0;
-    }
 };
 
-
-class CAESAR_CLASS {
-
-private:
-    int counter = 0;
-
+class CAESAR_CLASS{
 public:
-
-    void judgeDeathOfLife(PLAYER_CLASS *player) {
-        counter++;
-        if (counter % 3 == 0 && ATTACKS % 2 == 0) {
+    unsigned int countjudge;
+public:
+    void judgeDeathOfLife(PLAYER_CLASS *player){
+        countjudge++;
+        if(countjudge%3==0)
             player->die();
-        }
-    }
 
+    }
 };
 
-
-
-class ARENA_CLASS {
+class ARENA_CLASS{
 private:
-
-    CAESAR_CLASS *Caesar;
-
+    CAESAR_CLASS caesar;
 public:
-
-    ARENA_CLASS(CAESAR_CLASS *caesar) {
-        Caesar = caesar;
+    ARENA_CLASS(CAESAR_CLASS* c){
+        caesar=*c;
+        caesar.countjudge=0;
     }
-
-
-    void fight(PLAYER_CLASS *player1, PLAYER_CLASS *player2) {
-
-        if (player1->getRemainingHealth() != 0 && player2->getRemainingHealth() != 0)
-        {
-            PLAYER_CLASS *faster;
-            PLAYER_CLASS *slower;
-            if (player1->getAgility() < player2->getAgility()) {
-                faster = player2;
-                slower = player1;
-            } else {
-                faster = player1;
-                slower = player2;
+    void fight(PLAYER_CLASS* p1, PLAYER_CLASS* p2){
+        if(p1->getRemainingHealth()>0 && p2->getRemainingHealth()>0){
+            if(p1->getAgility() < p2->getAgility()){
+                PLAYER_CLASS* temp;
+                temp=p1;
+                p1=p2;
+                p2=temp;
             }
-
-            faster->printParams();
-            slower->printParams();
-            ATTACKS = 0;
-            while (ATTACKS <= 40) {
-                if (faster->getRemainingHealth() < 10 || slower->getRemainingHealth() < 10) {
-                    break;
+            p1->printParams();
+            p2->printParams();
+            unsigned int i=40;
+            while(i>=0 && p2->getRemainingHealth()>=10 && p1->getRemainingHealth()>=10){
+                if(p1->getRemainingHealth()>=10 && p2->getRemainingHealth()>=10){
+                    p2->takeDamage(p1->getDamage());
+                    i--;
+                    p2->printParams();
                 }
 
-                slower->takeDamage(faster->getDamage());
-                slower->printParams();
-                ATTACKS++;
-
-                if (slower->getRemainingHealth() < 10) {
-                    break;
+                if(p2->getRemainingHealth()>=10 && p1->getRemainingHealth()>=10){
+                    p1->takeDamage(p2->getDamage());
+                    i--;
+                    p1->printParams();
                 }
-
-                faster->takeDamage(slower->getDamage());
-                faster->printParams();
-                ATTACKS++;
-
             }
-
-            if (faster->getRemainingHealth() > 0) {
-                Caesar->judgeDeathOfLife(faster);
-                faster->printParams();
+            if(p1->getRemainingHealth()>0){
+                if(i%2!=0)
+                    caesar.countjudge++;
+                else
+                    caesar.judgeDeathOfLife(p1);
+                p1->printParams();
             }
-            if (slower->getRemainingHealth() > 0) {
-                Caesar->judgeDeathOfLife(slower);
-                slower->printParams();
+            if(p2->getRemainingHealth()>0){
+                if(i%2!=0)
+                    caesar.countjudge++;
+                else
+                    caesar.judgeDeathOfLife(p2);
+                p2->printParams();
             }
-            if (faster->getRemainingHealth() > 0) {
-                faster->applyWinnerReward();
-                faster->cure();
+            if(p1->getRemainingHealth()>0){
+                p1->applyWinnerReward();
+                p1->cure();
             }
-            if (slower->getRemainingHealth() > 0) {
-                slower->applyWinnerReward();
-                slower->cure();
+            if(p2->getRemainingHealth()>0){
+                p2->applyWinnerReward();
+                p2->cure();
             }
-            faster->printParams();
-            slower->printParams();
+            p1->printParams();
+            p2->printParams();
 
         }
     }
 };
 
-class HUMAN_CLASS : public virtual PLAYER_CLASS {
-
-protected:
-
-    std::string idH;
-    unsigned int defense;
-
+class HUMAN_CLASS : public virtual PLAYER_CLASS{
 public:
-
-    HUMAN_CLASS(std::string name = "") {
-        idH = name;
-        maxHP = 200;
-        currentHP = 200;
-        dmg = 30;
-        agility = 10;
-        defense = 10;
+    string id;
+    unsigned int def;
+public:
+    HUMAN_CLASS(string name=""){
+        id=name;
+        maxhp=200;
+        hp=200;
+        ad=30;
+        agi=10;
+        def=10;
+        next=NULL;
     }
 
-    void applyWinnerReward() {
-        dmg += 2;
-        agility += 2;
+    unsigned int getAgility(){
+        return agi;
+    }
+    unsigned int getDamage(){
+        return ad;
+    }
+    string getId(){
+        return id;
+    }
+    unsigned int getDef(){
+        return def;
+    }
+    unsigned int getRemainingHealth(){
+        return hp*100/maxhp;
+    }
+    void takeDamage(unsigned int dmg){
+        if(hp>dmg-(agi+def))
+            hp-=dmg-(agi+def);
+        else if (agi+def>dmg){}
+        else die();
     }
 
-    void cure() {
-        currentHP = maxHP;
+    void applyWinnerReward(){
+        ad+=2;
+        agi+=2;
     }
-
-    unsigned int getDamage() {
-        return this->dmg;
+    void cure(){
+        hp=maxhp;
     }
-
-    unsigned int getAgility() {
-        return this->agility;
+    void die(){
+        hp=0;
     }
-
-    void takeDamage(unsigned int DMG) {
-        if (defense + agility < DMG)
-        {
-            if ((DMG - (defense + agility)) >= currentHP)
-            {
-                die();
-                return;
-            }
-            currentHP -= (DMG - (defense + agility));
-        }
+    void printParams(){
+        if(getRemainingHealth()>0)
+            cout<<id<<":"<<maxhp<<":"<<hp<<":"<<getRemainingHealth()<<"%"
+                <<":"<<ad<<":"<<agi<<":"<<def<<endl;
+        else
+            cout<<id<<":"<<"R.I.P."<<endl;
     }
-
-    void printParams() {
-        if (getRemainingHealth() > 0)
-        {
-            cout << idH << ":" << maxHP << ":" << currentHP << ":" << getRemainingHealth()
-            << "%:" << getDamage() << ":" << getAgility() << ":" << defense << endl;
-        } else
-            {
-            cout << idH << ":R.I.P." << endl;
-        }
-    }
-
 };
 
-
-class BEAST_CLASS : public virtual PLAYER_CLASS {
-protected:
-
-    std::string idB;
-
+class BEAST_CLASS : public virtual PLAYER_CLASS{
 public:
-
-
-    BEAST_CLASS(std::string name="") {
-        idB = name;
-        maxHP = 150;
-        currentHP = 150;
-        dmg = 40;
-        agility = 20;
+    string id;
+public:
+    BEAST_CLASS(string name=""){
+        id=name;
+        maxhp=150;
+        hp=150;
+        ad=40;
+        agi=20;
+        next=NULL;
     }
-
-    void printParams() {
-        if (getRemainingHealth() > 0) {
-            cout << idB << ":" << maxHP << ":" << currentHP << ":" << getRemainingHealth()
-            << "%:" << getDamage() << ":"<< getAgility() << endl;
-        } else {
-            cout << idB << ":R.I.P." << endl;
-        }
+    unsigned int getAgility(){
+        return agi;
     }
-
-    void applyWinnerReward() {
-        dmg += 2;
-        agility += 2;
+    unsigned int getDamage(){
+        if(getRemainingHealth()>=25)
+            return ad;
+        else return ad*2;
     }
-
-    void cure() {
-        currentHP = maxHP;
+    string getId(){
+        return id;
     }
-
-    unsigned int getDamage() {
-        if (this->getRemainingHealth() > 25)
-            return this->dmg;
-        else return this->dmg * 2;
-
+    unsigned int getDef(){
+        return 0;
     }
-
-    unsigned int getAgility() {
-        return this->agility;
+    unsigned int getRemainingHealth(){
+        return hp*100/maxhp;
     }
-
-    void takeDamage(unsigned int dmg) {
-        if (agility / 2 < dmg) {
-            if ((dmg - (agility / 2)) >= currentHP) {
-                die();
-                return;
-            }
-            currentHP -= (dmg - (agility / 2));
-        }
+    void takeDamage(unsigned int dmg){
+        if(hp>dmg-(agi/2))
+            hp-=dmg-(agi/2);
+        else if (agi/2>dmg){}
+        else die();
     }
-
-
+    void applyWinnerReward(){
+        ad+=2;
+        agi+=2;
+    }
+    void cure(){
+        hp=maxhp;
+    }
+    void die(){
+        hp=0;
+    }
+    void printParams(){
+        if(getRemainingHealth()>0)
+            cout<<id<<":"<<maxhp<<":"<<hp<<":"<<getRemainingHealth()<<"%"
+                <<":"<<getDamage()<<":"<<agi<<endl;
+        else
+            cout<<id<<":"<<"R.I.P."<<endl;
+    }
 };
 
-class BERSERKER_CLASS : virtual public HUMAN_CLASS, virtual public BEAST_CLASS {
-
+class BERSERKER_CLASS :public   HUMAN_CLASS, public  BEAST_CLASS{
 public:
-
-    BERSERKER_CLASS(){};
-
-    BERSERKER_CLASS(std::string human="", string beast="") : HUMAN_CLASS(human), BEAST_CLASS(beast) {
-        idH = human;
-        idB = beast;
-        maxHP = 200;
-        currentHP = 200;
-        dmg = 35;
-        agility = 5;
-        defense = 15;
+    BERSERKER_CLASS(string human="", string beast=""): HUMAN_CLASS(human),BEAST_CLASS(beast){
+        maxhp=200;
+        hp=200;
+        ad=35;
+        agi=5;
+        def=15;
+        next=NULL;
     }
-
-    void applyWinnerReward() {
-        dmg += 2;
-        agility += 2;
-    }
-
-    void cure() {
-        currentHP = maxHP;
-    }
-
-    void printParams() {
-        if (getRemainingHealth() >= 25 || getRemainingHealth() == 0)
-        {
-            HUMAN_CLASS::printParams();
-        } else
-            {
-            BEAST_CLASS::printParams();
-        }
-    }
-
-    unsigned int getDamage() {
-        if (getRemainingHealth() >= 25 || getRemainingHealth() == 0)
-        {
+    unsigned int getDamage(){
+        if(getRemainingHealth()>=25 || getRemainingHealth()==0)
             return HUMAN_CLASS::getDamage();
-        } else
-            {
+        else
             return BEAST_CLASS::getDamage();
-        }
     }
-
-    unsigned int getAgility() {
-        if (getRemainingHealth() >= 25 || getRemainingHealth() == 0)
-        {
+    unsigned int getAgility(){
+        if(getRemainingHealth()>=25 || getRemainingHealth()==0)
             return HUMAN_CLASS::getAgility();
-        } else
-            {
+        else
             return BEAST_CLASS::getAgility();
-        }
     }
-
-    void takeDamage(unsigned int DMG) {
-
-        if (getRemainingHealth() >= 25 || getRemainingHealth() == 0)
-        {
-            HUMAN_CLASS::takeDamage(DMG);
-        } else
-            {
-            BEAST_CLASS::takeDamage(DMG);
-        }
+    unsigned int getRemainingHealth(){
+        return hp*100/maxhp;
     }
-
+    string getId(){
+        if(getRemainingHealth()>=25 || getRemainingHealth()==0)
+            return HUMAN_CLASS::getId();
+        else
+            return BEAST_CLASS::getId();
+    }
+    unsigned int getDef(){
+        if(getRemainingHealth()>=25 || getRemainingHealth()==0)
+            return HUMAN_CLASS::getDef();
+        else
+            return BEAST_CLASS::getDef();
+    }
+    void takeDamage(unsigned int dmg){
+        if(getRemainingHealth()>=25 || getRemainingHealth()==0)
+            HUMAN_CLASS::takeDamage(dmg);
+        else
+            BEAST_CLASS::takeDamage(dmg);
+    }
+    void printParams(){
+        if(getRemainingHealth()>=25 || getRemainingHealth()==0)
+            HUMAN_CLASS::printParams();
+        else
+            BEAST_CLASS::printParams();
+    }
+    void applyWinnerReward(){
+        ad+=2;
+        agi+=2;
+    }
+    void cure(){
+        hp=maxhp;
+    }
+    void die(){
+        hp=0;
+    }
 };
 
-struct Node {
-
-    PLAYER_CLASS *member;
-    Node *next;
-    Node *prev;
-
-    Node(Node *n, Node *p, PLAYER_CLASS *newmember) {
-        next = n;
-        prev = p;
-        member = newmember;
-    }
-
-    ~Node() {
-        member = NULL;
-        next = NULL;
-        prev = NULL;
-    }
-
-};
-
-
-class SQUAD_CLASS : virtual public PLAYER_CLASS {
-protected:
-    Node *first;
-    string idS;
-    unsigned int members;
-
+class SQUAD_CLASS : public  PLAYER_CLASS{
 public:
-
-    SQUAD_CLASS(){};
-
-    SQUAD_CLASS(std::string name) {
-        idS = name;
-        first = NULL;
-        members = 0;
-        currentHP = 0;
-        maxHP = 1;
+    string id;
+    unsigned int members;
+    PLAYER_CLASS* first;
+public:
+    SQUAD_CLASS(string squad="") {
+        id=squad;
+        first=NULL;
+        members=0;
+        agi=0;
+        ad=0;
+        maxhp=1;
+        hp=0;
     }
 
-    void applyWinnerReward() {
-        if (first != NULL) {
-            if (first->next != NULL)
-            {
-                Node *temp = first;
-                temp->member->applyWinnerReward();
-                while (temp->next != NULL)
-                {
+    void addPlayer(PLAYER_CLASS* player){
+        PLAYER_CLASS* temp=first;
+        if(player->getRemainingHealth()>0) {
+            if (temp) {
+                while (temp->next && temp != player) {
                     temp = temp->next;
-                    temp->member->applyWinnerReward();
                 }
-            } else
-            {
-                first->member->applyWinnerReward();
-            }
-        }
-    }
-
-    void cure() {
-        currentHP = maxHP;
-        if (first != NULL)
-        {
-            if (first->next != NULL)
-            {
-                Node *temp = first;
-                temp->member->cure();
-                while (temp->next != NULL)
-                {
-                    temp = temp->next;
-                    temp->member->cure();
+                if (temp != player) {
+                    temp->next = player;
+                    player->next=NULL;
+                    members++;
                 }
             } else {
-                first->member->cure();
-            }
-        }
-    }
-
-    void addPlayer(PLAYER_CLASS *newplayer) {
-
-        if (newplayer->getRemainingHealth() != 0)
-        {
-            if (currentHP < newplayer->currentHP)
-            {
-                currentHP = newplayer->currentHP;
-                maxHP = newplayer->maxHP;
-            }
-
-            if (first == NULL)
-            {
-                first = new Node(NULL, NULL, newplayer);
+                first = player;
+                player->next=NULL;
                 members++;
-            } else {
-                Node *temp = first;
-                if (newplayer != first->member)
-                {
-                    bool found=false;
-                    while (temp->next != NULL)
-                    {
-                        temp = temp->next;
-                        if (newplayer == temp->member) found=true;
-                    }
-                    if(found==false)
-                    {
-                        temp->next = new Node(NULL, temp, newplayer);
-                        members++;
-                    }
-                }
             }
         }
     }
 
-    void deletePlayer(PLAYER_CLASS *player) {
-        if (first != NULL) {
-            if (first->member == player && first->next == NULL) {
-                delete first;
-                members--;
-                first = NULL;
-            } else if (first->member == player) {
-                Node *temp = first->next;
-                temp->prev = NULL;
-                delete first;
-                first = temp;
-                members--;
-            } else {
-                Node *temp = first;
-                bool found=false;
-                while (temp->next != NULL&&found==false)
-                {
-                    if (temp->member == player)
-                    {
-                        Node *next = temp->next;
-                        Node *prev = temp->prev;
-                        next->prev = prev;
-                        prev->next = next;
-                        delete temp;
-                        members--;
-                        found=true;
-                    }
-                    temp = temp->next;
-                }
-                if (temp->member == player && found == false)
-                {
-                    Node *prev = temp->prev;
-                    prev->next = NULL;
-                    delete temp;
-                    members--;
-                }
-            }
+    unsigned int getAgility(){
+        PLAYER_CLASS* temp =first;
+        agi=-1;
+        while(temp){
+            if(agi>temp->agi)
+                agi=temp->agi;
+            temp=temp->next;
         }
+        return agi;
+    }
+    string getId(){
+        return id;
+    }
+    unsigned int getDef(){
+        return 0;
+    }
+    unsigned int getDamage(){
+        PLAYER_CLASS* temp =first;
+        ad=0;
+        while(temp){
+            ad+=temp->getDamage();
+            temp=temp->next;
+        }
+        return ad;
     }
 
-    void printParams() {
-
-        newHP();
-        if (first == NULL || currentHP == 0)
-        {
-            cout << idS << ":nemo" << endl;
-            if (first != NULL)
-            {
-                delete first;
-                first = NULL;
+    unsigned int getRemainingHealth(){
+        PLAYER_CLASS* temp=first;
+        hp=0;
+        while(temp){
+            if(temp->getRemainingHealth() > hp*100/maxhp){
+                hp=temp->hp;
+                maxhp=temp->maxhp;
             }
-
-        } else {
-            cout << idS << ":" << members << ":" << getRemainingHealth()
-                 << "%:" << getDamage() << ":"<< getAgility() << endl;
-
-            Node *temp = first;
-            while (temp != NULL)
-            {
-                temp->member->printParams();
-                temp = temp->next;
-            }
+            temp=temp->next;
         }
+        return hp*100/maxhp;
     }
 
-    void newHP() {
-        currentHP = 0;
-        maxHP = 1;
-
-        if (first == NULL)
-        {
-            currentHP = 0;
-            maxHP = 1;
-        } else if (first != NULL && first->next == NULL) {
-            currentHP = first->member->currentHP;
-            maxHP = first->member->maxHP;
-        } else {
-            Node *temp = first;
-            if (temp->member->getRemainingHealth() > getRemainingHealth())
-            {
-                currentHP = temp->member->currentHP;
-                maxHP = temp->member->maxHP;
-            }
-            while (temp->next != NULL)
-            {
-                temp = temp->next;
-                if (temp->member->getRemainingHealth() > getRemainingHealth())
-                {
-                    currentHP = temp->member->currentHP;
-                    maxHP = temp->member->maxHP;
+    void takeDamage(unsigned int dmg){
+        PLAYER_CLASS* temp=first;
+        unsigned int deadcount=0;
+        if(temp) {
+            temp->takeDamage(dmg/members);
+            if(temp->getRemainingHealth()>0) {
+                while (temp->next) {
+                    temp->next->takeDamage(dmg / members);
+                    if (temp->next->getRemainingHealth() == 0) {
+                        temp->next = temp->next->next;
+                        deadcount++;
+                    } else temp = temp->next;
                 }
-            }
-            if (temp->member->getRemainingHealth() > getRemainingHealth())
-            {
-                currentHP = temp->member->currentHP;
-                maxHP = temp->member->maxHP;
-            }
-        }
-    }
-
-    unsigned int getDamage() {
-        unsigned int dmg = 0;
-        if (first != NULL)
-        {
-            Node *temp = first;
-            dmg += first->member->getDamage();
-            while (temp->next != NULL)
-            {
-                temp = temp->next;
-                dmg += temp->member->getDamage();
-            }
-        }
-        return dmg;
-    }
-
-    unsigned int getAgility() {
-        unsigned int agility=0;
-        if (first != NULL) {
-            Node *temp = first;
-            agility = first->member->getAgility();
-            while (temp->next != NULL) {
-                temp = temp->next;
-                if (agility > temp->member->getAgility())
-                {
-                    agility = temp->member->getAgility();
-                }
-            }
-        }
-        return agility;
-    }
-
-    void takeDamage(unsigned int DMG) {
-
-        if (first != NULL)
-        {
-            if (first->next == NULL)
-            {
-                first->member->takeDamage(DMG);
-                if (first->member->getRemainingHealth() == 0)
-                {
-                    die();
-                    deletePlayer(first->member);
-                }
+                members-=deadcount;
             }
             else {
-                Node *temp;
-                bool removeFirst = false;
-
-                first->member->takeDamage(DMG / members);
-                if (first->member->getRemainingHealth() == 0)
-                {
-                    removeFirst = true;
-                }
-
-                for (temp = first->next; temp->next != NULL; temp = temp->next)
-                {
-                    temp->member->takeDamage(DMG / members);
-                    if (temp->member->getRemainingHealth() == 0)
-                    {
-                        Node *tmp = temp;
-                        temp = temp->prev;
-                        deletePlayer(tmp->member);
+                first = first->next;
+                deadcount++;
+                while (temp->next) {
+                    temp->next->takeDamage(dmg/members);
+                    if (temp->next->getRemainingHealth() == 0) {
+                        temp->next=temp->next->next;
+                        deadcount++;
                     }
+                    else temp = temp->next;
                 }
+                members-=deadcount;
 
-                temp->member->takeDamage(DMG / members);
-                if (temp->member->getRemainingHealth() == 0)
-                {
-                    deletePlayer(temp->member);
+                temp=first;
+                bool found=0;
+                while(temp && found==0){
+                    if(temp->getRemainingHealth()>0){
+                        first=temp;
+                        found=1;
+                    }
+                    temp=temp->next;
                 }
-
-                if (removeFirst)
-                {
-                    deletePlayer(first->member);
-                }
+                if(!found)
+                    first=NULL;
             }
         }
     }
+
+    void die(){
+        PLAYER_CLASS* temp=first;
+        while(temp){
+            temp->die();
+            temp=temp->next;
+        }
+        first=NULL;
+        members=0;
+        hp=0;
+    }
+
+    void applyWinnerReward(){
+        PLAYER_CLASS* temp=first;
+        while(temp){
+            temp->applyWinnerReward();
+            agi+=2;
+            ad+=2;
+            temp=temp->next;
+        }
+    }
+
+    void cure(){
+        PLAYER_CLASS* temp=first;
+        while(temp){
+            temp->cure();
+            temp=temp->next;
+        }
+    }
+
+    PLAYER_CLASS* Sort(PLAYER_CLASS* head) {
+        if (!head){
+            return head;
+        }
+
+        PLAYER_CLASS* new_head = head;
+        head = head->next;
+        new_head->next = NULL;
+
+        while (head){
+            PLAYER_CLASS* insert_pre = NULL;
+            PLAYER_CLASS* insert_pos = new_head;
+            while (insert_pos){
+                if (insert_pos->getId() > head->getId()){
+                    break;
+                }
+                else if (insert_pos->getId() == head->getId()){
+                    if(insert_pos->maxhp>head->maxhp){
+                        break;
+                    }
+                    else if(insert_pos->maxhp == head->maxhp){
+                        if(insert_pos->hp>head->hp){
+                            break;
+                        }
+                        else if(insert_pos->hp == head->hp){
+                            if(insert_pos->getRemainingHealth()>head->getRemainingHealth()){
+                                break;
+                            }
+                            else if(insert_pos->getRemainingHealth()==head->getRemainingHealth()){
+                                if(insert_pos->getDamage() > head->getDamage()){
+                                    break;
+                                }
+                                else if(insert_pos->getDamage() == head->getDamage()){
+                                    if(insert_pos->getAgility()>head->getAgility()){
+                                        break;
+                                    }
+                                    else if(insert_pos->getAgility() == head->getAgility()){
+                                        if(insert_pos->getDef()>head->getDef()){
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                insert_pre = insert_pos;
+                insert_pos = insert_pos->next;
+            }
+
+            if (insert_pre){
+                insert_pre->next = head;
+                head = head->next;
+                insert_pre->next->next = insert_pos;
+            }
+            else{
+                new_head = head;
+                head = head->next;
+                new_head->next = insert_pos;
+            }
+        }
+        return new_head;
+    }
+
+    void printParams(){
+        if(members && first!=NULL) {
+
+            PLAYER_CLASS* temp=first;
+
+            cout << id << ":" << members << ":" << getRemainingHealth()
+                 << "%:" << getDamage() << ":" << getAgility() << endl;
+
+            first= Sort(first);
+            temp=first;
+            while(temp){
+                temp->printParams();
+                temp=temp->next;
+            }
+        }
+        else cout<<id<<":"<<"nemo"<<endl;
+    }
 };
+
+int main(){
+
+    CAESAR_CLASS caesar;
+    ARENA_CLASS arena(&caesar);
+
+    HUMAN_CLASS human1("human1");
+    BEAST_CLASS beast1("beast1");
+    BERSERKER_CLASS berserker1("berserker-human1", "berserker-beast1");
+
+    HUMAN_CLASS dead("dead-human");
+    dead.takeDamage(500);
+
+    SQUAD_CLASS squad("squad");
+    squad.addPlayer(&human1);
+    squad.addPlayer(&beast1);
+    squad.addPlayer(&berserker1);
+    squad.addPlayer(&dead);
+    squad.addPlayer(&human1);
+    squad.addPlayer(&beast1);
+    squad.addPlayer(&berserker1);
+
+    HUMAN_CLASS human2("human");
+    BEAST_CLASS human3("human");
+    HUMAN_CLASS human4("human");
+    BERSERKER_CLASS human5("human", "human");
+
+    SQUAD_CLASS humansquad("humansquad");
+    humansquad.addPlayer(&human2);
+    humansquad.addPlayer(&human3);
+    humansquad.addPlayer(&human4);
+    humansquad.addPlayer(&human5);
+
+    humansquad.takeDamage(680);
+
+    arena.fight(&humansquad, &squad);
+
+
+    return 0;
+
+}
